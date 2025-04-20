@@ -5,24 +5,24 @@ import streamlit as st
 import hashlib
 import json
 import os
-import time 
+import time
 from cryptography.fernet import Fernet
 from base64 import urlsafe_b64encode
 from hashlib import pbkdf2_hmac
 
 # Page Configuration
-Page_Config = st.set_page_config(
-    page_title = "Secure Data Encryption System",
-    page_icon = "⚡",
-    layout = "wide"
+st.set_page_config(
+    page_title="Secure Data Encryption System",
+    page_icon="⚡",
+    layout="wide"
 )
 
 # User Data Information
-DATA_FILE ="secure_data.json"
+DATA_FILE = "secure_data.json"
 SALT = b"secure_salt_value"
-LOCKOUT_DURATION =60
+LOCKOUT_DURATION = 60
 
-#Login Detail
+# Login Detail
 if "authenticated_user" not in st.session_state:
     st.session_state.authenticated_user = None
 
@@ -32,29 +32,24 @@ if "failed_attempt" not in st.session_state:
 if "lockout_time" not in st.session_state:
     st.session_state.lockout_time = 0
 
-# If Data Is Loaded 
-def load_data ():
+# If Data Is Loaded
+def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     return {}
 
-def save_data(data)    :
-    with open(DATA_FILE, "w")as f:
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
         json.dump(data, f)
 
-
 def generate_key(passkey):
-    key = pbkdf2_hmac('sha256' , passkey.encode(), SALT, 100000)
+    key = pbkdf2_hmac('sha256', passkey.encode(), SALT, 100000)
     return urlsafe_b64encode(key)
-
 
 def hash_password(password):
     return hashlib.pbkdf2_hmac('sha256', password.encode(), SALT, 100000).hex()
 
-
-
-#Used cryptography.fernet 
 def encrypt_text(text, key):
     try:
         cipher = Fernet(generate_key())
@@ -68,7 +63,7 @@ def decrypt_text(encrypt_text, key):
         return cipher.decrypt(encrypt_text.encode()).decode()
     except:
         return None
-    
+
 stored_data = load_data()
 
 # Navbar
@@ -80,7 +75,6 @@ if choice == "Home":
     st.subheader("Welcome to the Secure Data Encryption System")
     st.markdown("This is a simple data encryption system that allows you to encrypt and decrypt data using a password.")
 
-# User Registration
 elif choice == "Register":
     st.subheader("Register")
     username = st.text_input("Username")
@@ -93,35 +87,34 @@ elif choice == "Register":
                 stored_data[username] = hash_password(password)
                 save_data(stored_data)
                 st.success("Registration successful")
-
         else:
             st.error("Please enter a username and password")
-    elif choice == "Login":
-        st.subheader("Login")
-        if time.time() < st.session_state.lockout_time:
-            remaining_time = int(st.session_state.lockout_time - time.time())
-            st.error(f"Too many failed attempts. Try again in {remaining_time} seconds.")
-            st.stop() 
-        
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
 
-        if st.button("Login"):
-            if username in stored_data and stored_data[username] == hash_password(password):
-                st.session_state.authenticated_user = username
-                st.session_state.failed_attempt = 0
-                st.success(f"Welcome, {username}! You have successfully logged in.")
-            else:
-                st.session_state.failed_attempt += 1
-                remaining_attempts = 3 - st.session_state.failed_attempt
-                st.error(f"Invalid username or password. {remaining_attempts} attempts remaining.")
+elif choice == "Login":
+    st.subheader("Login")
+    if time.time() < st.session_state.lockout_time:
+        remaining_time = int(st.session_state.lockout_time - time.time())
+        st.error(f"Too many failed attempts. Try again in {remaining_time} seconds.")
+        st.stop()
+    
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
-                if st.session_state.failed_attempt >= 3:
-                    st.session_state.lockout_time = time.time() + LOCKOUT_DURATION
-                    st.error(f"Too many failed attempts. Try again in {LOCKOUT_DURATION} seconds.")
-                    st.stop()
+    if st.button("Login"):
+        if username in stored_data and stored_data[username] == hash_password(password):
+            st.session_state.authenticated_user = username
+            st.session_state.failed_attempt = 0
+            st.success(f"Welcome, {username}! You have successfully logged in.")
+        else:
+            st.session_state.failed_attempt += 1
+            remaining_attempts = 3 - st.session_state.failed_attempt
+            st.error(f"Invalid username or password. {remaining_attempts} attempts remaining.")
 
-# Store Data Section
+            if st.session_state.failed_attempt >= 3:
+                st.session_state.lockout_time = time.time() + LOCKOUT_DURATION
+                st.error(f"Too many failed attempts. Try again in {LOCKOUT_DURATION} seconds.")
+                st.stop()
+
 elif choice == "Store Data":
     if not st.session_state.authenticated_user:
         st.warning("Please login first to store data")
@@ -139,7 +132,6 @@ elif choice == "Store Data":
             else:
                 st.error("Please enter data and passkey")
 
-# Retrieve Data Section
 elif choice == "Retrieve Data":
     if not st.session_state.authenticated_user:
         st.warning("Please login first to retrieve data")
@@ -152,7 +144,7 @@ elif choice == "Retrieve Data":
         else:
             st.write("Encrypted Data:")
             for i, item in enumerate(user_data):
-                st.code(item,language = "text")
+                st.code(item, language="text")
             
             encrypted_input = st.text_area("Enter the encrypted data to decrypt")
             passkey = st.text_input("Enter your Encryption Key", type="password")
