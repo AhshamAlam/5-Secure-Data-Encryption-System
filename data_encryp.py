@@ -50,18 +50,22 @@ def generate_key(passkey):
 def hash_password(password):
     return hashlib.pbkdf2_hmac('sha256', password.encode(), SALT, 100000).hex()
 
-def encrypt_text(text, key):
+def encrypt_text(text, passkey):
     try:
-        cipher = Fernet(generate_key())
+        key = generate_key(passkey)
+        cipher = Fernet(key)
         return cipher.encrypt(text.encode()).decode()
-    except:
+    except Exception as e:
+        st.error(f"Encryption error: {str(e)}")
         return None
 
-def decrypt_text(encrypt_text, key):
+def decrypt_text(encrypted_text, passkey):
     try:
-        cipher = Fernet(generate_key(key))
-        return cipher.decrypt(encrypt_text.encode()).decode()
-    except:
+        key = generate_key(passkey)
+        cipher = Fernet(key)
+        return cipher.decrypt(encrypted_text.encode()).decode()
+    except Exception as e:
+        st.error(f"Decryption error: {str(e)}")
         return None
 
 stored_data = load_data()
@@ -154,10 +158,14 @@ elif choice == "Retrieve Data":
             passkey = st.text_input("Enter your Encryption Key", type="password")
 
             if st.button("Decrypt and Retrieve"):
-                result = decrypt_text(encrypted_input, passkey)
-                if result:
-                    st.success("Data decrypted successfully")
+                if encrypted_input and passkey:
+                    result = decrypt_text(encrypted_input, passkey)
+                    if result:
+                        st.success("Data decrypted successfully")
+                        st.text_area("Decrypted Data", result, height=200)
+                    else:
+                        st.error("Failed to decrypt data. Please check your passkey.")
                 else:
-                    st.error("Failed to decrypt data. Please check your passkey.")
+                    st.error("Please enter both encrypted data and passkey")
 
               
